@@ -1,73 +1,102 @@
 #include "SensorManager.h"
-#include "config.h"
 #include <DHT.h>
-#include <math.h>
 
 static DHT dht(PIN_DHT, DHT_TYPE);
 
 static float lastTemp;
 static float lastHumidity;
 
+void sensor_init  (SensorManager* sm)
+{
+  sm->lastTemp= 0.0f;
+  sm->lastHumidity= 0.0f;
+  sm->motionActive= false;
+  sm->motionClearTime = 0;
+}
+
 void sensor_begin(void)
 {
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  pinMode(PIN_PIR, INPUT);
+  pinMode(PIN_DOOR, INPUT_PULLUP);
   dht.begin();
 }
 
-//read vibration from POT
-static uint16_t readVibration(void)
-{  
+
+
+
+//read sensor of PIR for motion
+static bool readPIR(SensorManager* sm)
+{
+  // read the value from motion sensor , check if it is true for next 10 secs
+  const bool pirHigh = (digitalRead(PIN_PIR) == HIGH);
+  const unsigned long now = millis();
+  if(pirHigh)
+  {
+    sm->motionActive = true;
+    sm->motionClearTime = now + MOTION_CLEAR_MS;
+  }
+  else if( sm->motionActive && (now >sm->motionClearTime )) 
+  {
+    sm->motionActive = false;
+  }
+  return sm->motionActive;
+}  
+
+
+
+//read door status
+static bool readDoor(void)
+{
+  return (digitalRead(PIN_DOOR) == LOW); // 0 door is open , 1 door is closed
+} 
+  
+  //read ldr sensor-light present in room or not
+static uint16_t readLDR(void)
+{
   uint16_t sum = 0;
   uint8_t i;
-  for( i = 0; i < 4; i++)
+  for(i = 0; i < 4; i++) // read the average of 4 readings
   {
-    sum += analogRead(PIN_VIBRATION);
-    delay(100);
+    sum += (uint16_t)analogRead(PIN_LDR); // 0 to 1023
+    delay(2); //2ms
   }
-  
-  return sum/4; // return average of 4 samples
-}
-
-//read LM35 temperature
-static float readLM35(void)
-{
-  //read temperature from LM35 covert to celcius
-  float t = analogRead(PIN_LM35) * (500.0f /1023.0f);
-  return round(t * 10.0f) * 0.1f;
+  return sum/4; // wear house is dark or not [300 > val -> dark , light is avaliable
 }
 
 
 
-
-//read data from the sensor , return staus of DHT22 -> returns 0 on error
-
-uint8_t sensors_read(SensorData* out)
+//read data from sensor,return dht22 status ,return 0 on error
+bool sensor_read(SensorData* out,SensorManager* sm)
 {
+  //read dht22 sensor
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
 
-    //read dht22 sensor
-    float t = dht.readTemperature();
-    float h = dht.readHumidity();
+  //if error in DHT sensor
+  if( isnan(t) || isnan(h))
+ {  
+    out->sensorError =1;
+    out->temperature = sm->lastTemp;
+    out->humidity= sm->lastHumidity;
+ }
+ else
+  {
+    out->sensorError = 0;
+    out->temperature = round(t * 10.0f) * 0.1f;
+    out->humidity = round(h * 10.0f) * 0.1f;
+    sm->lastTemp = out->temperature;
+    sm->lastHumidity = out->humidity;
+  }
 
-    //if error in DHT sensor
-    if( isnan(t) || isnan(h))
-    {
-      out->sensorError = 1;
-      out->temperature = lastTemp;
-      out->humidity    = lastHumidity;
-    }  
-    else
-    {
-      out->sensorError =0;
-      out->temperature = round(t*10.0f)*0.1f;
-      out->humidity    = round(h*10.0f)*0.1f;
-      lastTemp= out->temperature;
-      lastHumidity= out->humidity;
-    }
+//read ldr sensor //read door status //read motion detected
+  //read motion detected
+  out->motionDetected = readPIR(sm);
+  //read door status
+  out->doorOpen = readDoor();
+  //read ldr sensor
+  out->ldrValue = readLDR();
+  out->isDark = (out->ldrValue < LDR_DARK_THRESH); //300 > val -> dark , light is avaliable
 
-    //read vibration sensor //read LM35 //read machine staus
-    out->lm35Temp =readLM35();
-    out->vibration = readVibration();
-    out->machineStatus = (digitalRead(PIN_BUTTON) == LOW) ? 1:0;
+  return !out->sensorError;
 
-    return !out->sensorError; 
-}    
+}

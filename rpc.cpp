@@ -24,15 +24,11 @@ static uint8_t       rpcBufLen = 0;
 /* ── Internal helpers ──────────────────────────────────────── */
 
 /* Pull the request ID from the end of the topic string */
-static void extractRequestId(const char* topic, char out[RPC_ID_SIZE])
-{
+static void extractRequestId(const char* topic, char out[RPC_ID_SIZE]) {
     const char* slash = strrchr(topic, '/');
-    if (slash) 
-    {
+    if (slash) {
         strncpy(out, slash + 1, RPC_ID_SIZE - 1);
-    } 
-    else 
-    {
+    } else {
         out[0] = '\0';
     }
     out[RPC_ID_SIZE - 1] = '\0';

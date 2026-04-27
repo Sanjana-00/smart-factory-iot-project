@@ -1,4 +1,5 @@
 #include "network.h"
+#include "rpc.h"
 
 static PubSubClient* mqtt            =NULL;
 static byte          mac[6]          =NODE_MAC;
@@ -11,7 +12,7 @@ static void doConnect(void)
   if(mqtt->connect(CLIENT_ID, ACCESS_TOKEN, NULL))
   {
     Serial.println("MQTT CONNECTED ✔");
-    digitalWrite(PIN_LED_RED, LOW);     // turn OFF red LED
+   // digitalWrite(PIN_LED_RED, LOW);     // turn OFF red LED
     mqtt->subscribe(TOPIC_RPC_REQUEST);
   }
   else
@@ -21,7 +22,7 @@ static void doConnect(void)
     Serial.println(mqtt->state());   // VERY IMPORTANT
   }
 }
-void network_begin(PubSubClient* mqttClient)
+void network_begin(PubSubClient* mqttClient, void (*onConnected)(void))
 {
 
   mqtt=mqttClient;
@@ -32,6 +33,7 @@ void network_begin(PubSubClient* mqttClient)
 
   //connect to things board
   mqtt->setServer(TB_SERVER,TB_PORT);
+  mqtt->setCallback(rpc_mqttCallback);
   doConnect();
 }  
 

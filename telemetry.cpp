@@ -19,18 +19,19 @@ void telemetry_init(char* buf, uint8_t bufLen)
 }
 void telemetry_publishTelemetry(const SensorData* data, uint8_t relayState)
 {
-  char t[8], h[8], l[8];
+  char t[8], h[8];
   f1(data->temperature, t);
   f1(data->humidity, h);
-  f1(data->lm35Temp, l);
 
   /* put data into json format */
-  snprintf_P(buffer, len, PSTR("{\"temperature\":%s,\"humidity\":%s,\"lm35Temp\":%s,"
-                                "\"vibration\":%u,\"machineStatus\":%u,\"relayState\":%u,"
-                                "\"sensorError\":%u}"), t , h, l,
-                                (unsigned)data->vibration,
-                                (unsigned)data-> machineStatus,
+  snprintf_P(buffer, len, PSTR("{\"temperature\":%s,\"humidity\":%s,\"ldrValue\":%u,"
+                                "\"isDark\":%u,\"motionDetected\":%u,\"relayState\":%u,"
+                                "\"doorOpen\":%u,\"sensorError\":%u}"), t , h, 
+                                (unsigned)data->ldrValue,
+                                (unsigned)data-> isDark,
+                                (unsigned)data-> motionDetected,
                                 (unsigned)relayState,
+                                (unsigned)data-> doorOpen,
                                 (unsigned)data-> sensorError
                                 );
 

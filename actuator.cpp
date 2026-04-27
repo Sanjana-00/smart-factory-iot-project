@@ -2,36 +2,35 @@
 #include "config.h"
 #include <Arduino.h> 
 
+static uint8_t relay_status;
+
 static uint8_t blinkstate=0;
 static unsigned long lastBlinkTime=0;
-static uint8_t relay_status;
 
 void actuators_begin(void)
 {
-  pinMode(PIN_LED_GREEN, OUTPUT);
-  pinMode(PIN_LED_YELLOW, OUTPUT);
   pinMode(PIN_LED_RED, OUTPUT);
-
-  pinMode(PIN_RELAY,OUTPUT);
+  pinMode(PIN_LED_GREEN, OUTPUT);//everything normal
+  pinMode(PIN_LED_YELLOW, OUTPUT);//on -warning,blink-critical
+  pinMode(PIN_RELAY, OUTPUT);//ventilation-if more humidity
 
   // in the begining till network connection LED be ON
   digitalWrite(PIN_LED_RED, HIGH);
+  digitalWrite(PIN_LED_GREEN, LOW);
+  digitalWrite(PIN_LED_YELLOW, LOW);
+  digitalWrite(PIN_RELAY, LOW);
 
 }
 
-//from rpc request is to set relay then turn on the relay
 void    actuators_setRelay(uint8_t on)
 {
    relay_status=on;
    digitalWrite(PIN_RELAY, on ? HIGH : LOW );
 }
-
-//send back the status of relay through things board
 uint8_t actuators_getRelayState(void)
 {
-   return relay_status;
+  return relay_status;
 }
-
 
 void actuators_updateStatusLEDs(uint8_t mqttConnected, uint8_t sensorError)
 {
@@ -66,3 +65,4 @@ if(sensorError)
     }
   
 }
+

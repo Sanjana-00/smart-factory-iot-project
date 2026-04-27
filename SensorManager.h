@@ -1,28 +1,36 @@
-#ifndef SENSORS_H
-#define SENSORS_H
-
-/*
- * sensors.h — reads DHT22, LM35, vibration sensor, and button.
- *
- * C-style module: all state lives in static globals inside sensors.cpp.
- * Call sensors_begin() once in setup(), then sensors_read() in loop().
- */
+#ifndef SENSOR_MANAGER_H
+#define SENSOR_MANAGER_H
 
 #include <Arduino.h>
 #include "config.h"
 
-/* All sensor readings packed into one plain struct */
+// ─────────────────────────────────────────────────────────────
+//  SensorData — all readings for one sample cycle
+// ─────────────────────────────────────────────────────────────
 typedef struct {
-    float    temperature;   /* DHT22 temperature in °C        */
-    float    humidity;      /* DHT22 humidity in %            */
-    float    lm35Temp;      /* LM35 temperature in °C         */
-    uint16_t vibration;     /* averaged ADC reading (0–1023)  */
-    uint8_t  machineStatus; /* 1 = button pressed (active LOW) */
-    uint8_t  sensorError;   /* 1 = DHT22 read failed          */
+    float    temperature;      // DHT22 °C
+    float    humidity;         // DHT22 %RH
+    uint16_t ldrValue;         // Raw ADC (0–1023); lower = darker
+    bool     motionDetected;   // PIR: true = motion present
+    bool     doorOpen;         // Door sensor: true = door open
+    bool     isDark;           // Derived: ldrValue < LDR_DARK_THRESH
+    bool     sensorError;      // DHT22 read failure
 } SensorData;
 
-void    sensor_begin(void);
-uint8_t sensors_read(SensorData* out);   /* returns 0 on DHT error */
-int     sensors_freeMemory(void);        /* free SRAM in bytes     */
+// ─────────────────────────────────────────────────────────────
+//  SensorManager — POD context struct
+//  DHT object is kept as a file-scope static in SensorManager.cpp
+// ─────────────────────────────────────────────────────────────
+typedef struct {
+    float         lastTemp;
+    float         lastHumidity;
+    bool          motionActive;       // Latched PIR state
+    unsigned long motionClearTime;    // When to clear after PIR goes LOW
+} SensorManager;
 
-#endif /* SENSORS_H */
+// ── Module functions ──────────────────────────────────────────
+void sensor_init  (SensorManager* sm);
+void sensor_begin ();
+bool sensor_read  (SensorData* out,SensorManager* sm);
+
+#endif // SENSOR_MANAGER_H

@@ -15,7 +15,7 @@
 #include "config.h"
 
 /* Pass the PubSubClient created in the main sketch */
-void    network_begin(PubSubClient* mqtt);
+void    network_begin(PubSubClient* mqtt, void (*onConnected)(void));
 void    network_maintain(void);
 uint8_t network_isConnected(void);
 uint8_t network_publish(const char* topic, const char* payload, uint8_t retain);
